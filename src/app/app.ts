@@ -190,6 +190,12 @@ const EXERCISES: Exercise[] = [
   templateUrl: './app.html',
 })
 export class App {
+  private readonly launchParams = new URLSearchParams(window.location.search);
+  protected readonly isBrowserSession = this.launchParams.get('mode') === 'browser'
+    && !!this.launchParams.get('session');
+  protected readonly webClosing = signal(false);
+  protected readonly webClosed = signal(false);
+  protected readonly webCloseError = signal('');
   protected readonly exercises = EXERCISES;
   protected readonly theoryChapters = THEORY_CHAPTERS;
   protected readonly levels: LevelFilter[] = ['Todos', 'Básico', 'Medio', 'Alto'];
@@ -225,6 +231,22 @@ export class App {
   protected readonly progressLabel = computed(() => this.activeView() === 'practice'
     ? `${this.completedCount()} / ${this.exercises.length} COMPLETADOS`
     : `${this.studiedCount()} / ${this.theoryChapters.length} CAPÍTULOS LEÍDOS`);
+
+  protected async closeWebApp(): Promise<void> {
+    if (!this.isBrowserSession || this.webClosing() || this.webClosed()) return;
+    this.webClosing.set(true);
+    this.webCloseError.set('');
+    try {
+      const token = this.launchParams.get('session')!;
+      const response = await fetch(`/__stop?token=${encodeURIComponent(token)}`, { method: 'POST' });
+      if (!response.ok) throw new Error('No se pudo detener la aplicación.');
+      this.webClosed.set(true);
+    } catch {
+      this.webCloseError.set('No se pudo cerrar la aplicación. Vuelve a intentarlo.');
+    } finally {
+      this.webClosing.set(false);
+    }
+  }
 
   protected setView(view: AppView): void {
     this.activeView.set(view);

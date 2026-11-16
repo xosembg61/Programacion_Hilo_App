@@ -1,7 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
+import { afterEach, vi } from 'vitest';
 
 describe('App', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+    vi.unstubAllGlobals();
+  });
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
@@ -99,5 +104,42 @@ describe('App', () => {
     fixture.detectChanges();
 
     expect(compiled.querySelectorAll('.exercise-row').length).toBe(5);
+  });
+
+  it('should hide the close button in native mode and ordinary web hosting', async () => {
+    for (const query of ['', '?session=test&mode=native', '?mode=browser']) {
+      window.history.replaceState(null, '', '/' + query);
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('.web-close-button')).toBeNull();
+      fixture.destroy();
+    }
+  });
+
+  it('should stop the browser session and show a closed page', async () => {
+    window.history.replaceState(null, '', '/?session=test-token&mode=browser');
+    const stop = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', stop);
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    fixture.nativeElement.querySelector('.web-close-button').click();
+    await fixture.whenStable();
+
+    expect(stop).toHaveBeenCalledWith('/__stop?token=test-token', { method: 'POST' });
+    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Aplicación cerrada');
+    expect(fixture.nativeElement.querySelector('.app-shell')).toBeNull();
+  });
+
+  it('should allow retrying when the server rejects a close request', async () => {
+    window.history.replaceState(null, '', '/?session=test-token&mode=browser');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    fixture.nativeElement.querySelector('.web-close-button').click();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Vuelve a intentarlo');
+    expect(fixture.nativeElement.querySelector('.web-close-button').disabled).toBe(false);
+    expect(fixture.nativeElement.querySelector('.app-shell')).toBeTruthy();
   });
 });

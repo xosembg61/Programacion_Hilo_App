@@ -16,6 +16,8 @@ internal sealed class LocalSiteServer : IDisposable
     private Task? _acceptLoop;
     private CancellationTokenSource? _pendingClose;
     private string _sessionToken = string.Empty;
+    private bool _stopping;
+    private bool _disposed;
 
     internal LocalSiteServer(string siteRoot)
     {
@@ -101,9 +103,9 @@ internal sealed class LocalSiteServer : IDisposable
                 {
                 }
 
-                if (request.Length < 2 || request[0] != "GET")
+                if (request.Length < 2)
                 {
-                    await WriteResponseAsync(stream, 405, "Method Not Allowed", "text/plain; charset=utf-8", [], cancellationToken);
+                    await WriteResponseAsync(stream, 400, "Bad Request", "text/plain; charset=utf-8", [], cancellationToken);
                     return;
                 }
 
@@ -116,16 +118,41 @@ internal sealed class LocalSiteServer : IDisposable
 
                 var requestUri = new Uri("http://127.0.0.1" + target);
                 var requestPath = requestUri.AbsolutePath;
-                var suppliedToken = QueryValue(requestUri.Query, "token");
-                if (request[0] == "POST" && requestPath == "/__close")
+                if (requestPath is "/__close" or "/__stop")
                 {
-                    if (CryptographicOperations.FixedTimeEquals(
+                    if (request[0] != "POST")
+                    {
+                        await WriteResponseAsync(stream, 405, "Method Not Allowed", "text/plain; charset=utf-8", [], cancellationToken);
+                        return;
+                    }
+
+                    var suppliedToken = QueryValue(requestUri.Query, "token");
+                    if (!CryptographicOperations.FixedTimeEquals(
                         Encoding.ASCII.GetBytes(suppliedToken ?? string.Empty),
                         Encoding.ASCII.GetBytes(_sessionToken)))
                     {
-                        ScheduleStop();
+                        await WriteResponseAsync(stream, 403, "Forbidden", "text/plain; charset=utf-8", [], cancellationToken);
+                        return;
                     }
-                    await WriteResponseAsync(stream, 204, "No Content", "text/plain; charset=utf-8", [], cancellationToken);
+
+                    if (requestPath == "/__close")
+                    {
+                        ScheduleStop();
+                        await WriteResponseAsync(stream, 204, "No Content", "text/plain; charset=utf-8", [], cancellationToken);
+                    }
+                    else
+                    {
+                        // Finish the response before releasing the launcher's wait.
+                        // Explicit closure must also stop if the browser disconnects.
+                        try
+                        {
+                            await WriteResponseAsync(stream, 204, "No Content", "text/plain; charset=utf-8", [], cancellationToken);
+                        }
+                        finally
+                        {
+                            StopServer();
+                        }
+                    }
                     return;
                 }
 
@@ -136,7 +163,8 @@ internal sealed class LocalSiteServer : IDisposable
                 }
 
                 var session = QueryValue(requestUri.Query, "session");
-                if (string.Equals(session, _sessionToken, StringComparison.Ordinal))
+                if ((requestPath is "/" or "/index.html") &&
+                    string.Equals(session, _sessionToken, StringComparison.Ordinal))
                 {
                     CancelPendingStop();
                 }
@@ -229,19 +257,25 @@ internal sealed class LocalSiteServer : IDisposable
     {
         lock (_closeGate)
         {
-            _pendingClose?.Cancel();
-            _pendingClose?.Dispose();
+            if (_stopping || _disposed)
+                return;
+            CancelPendingStop();
             _pendingClose = new CancellationTokenSource();
-            _ = StopAfterDelayAsync(_pendingClose.Token);
+            _ = StopAfterDelayAsync(_pendingClose, _pendingClose.Token);
         }
     }
 
-    private async Task StopAfterDelayAsync(CancellationToken cancellationToken)
+    private async Task StopAfterDelayAsync(CancellationTokenSource pendingClose, CancellationToken cancellationToken)
     {
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-            StopServer();
+            lock (_closeGate)
+            {
+                // A reload or a newer close request may have replaced this timer.
+                if (!_disposed && ReferenceEquals(_pendingClose, pendingClose))
+                    StopServer();
+            }
         }
         catch (OperationCanceledException)
         {
@@ -260,17 +294,27 @@ internal sealed class LocalSiteServer : IDisposable
 
     private void StopServer()
     {
-        if (_stopped.IsSet)
-            return;
-        _stopped.Set();
-        _shutdown.Cancel();
-        _listener?.Stop();
+        lock (_closeGate)
+        {
+            if (_stopping || _disposed)
+                return;
+            _stopping = true;
+            CancelPendingStop();
+            _shutdown.Cancel();
+            _listener?.Stop();
+            _stopped.Set();
+        }
     }
 
     public void Dispose()
     {
-        CancelPendingStop();
-        StopServer();
+        lock (_closeGate)
+        {
+            if (_disposed)
+                return;
+            StopServer();
+            _disposed = true;
+        }
         try
         {
             _acceptLoop?.Wait(TimeSpan.FromSeconds(1));

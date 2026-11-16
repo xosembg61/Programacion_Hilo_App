@@ -31,6 +31,15 @@
 .mode-button:hover { color: var(--ink); }
 .mode-button.active { background: var(--navy); color: white; }
 .top-progress { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .07em; }
+.topbar-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px; }
+.web-close-button { min-height: 34px; flex: none; padding: 0 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--navy); cursor: pointer; font-size: 11px; font-weight: 700; }
+.web-close-button:hover { border-color: var(--navy); background: var(--blue-soft); }
+.web-close-button:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.web-close-button:disabled { opacity: .6; cursor: wait; }
+.web-close-error { margin: 12px 28px; color: #a32828; font-size: 13px; }
+.web-session-ended { display: flex; min-height: 100vh; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
+.web-session-ended h1 { margin: 0; color: var(--navy); font-size: 28px; }
+.web-session-ended p { margin: 0; color: var(--muted); line-height: 1.6; }
 .chapter-link { justify-content: flex-start; }
 .chapter-link .level-link-name { display: -webkit-box; flex: 1; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.35; }
 .chapter-link-number { display: grid; width: 25px; height: 25px; flex: none; place-items: center; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); font-size: 9px; font-weight: 750; font-variant-numeric: tabular-nums; }
@@ -188,6 +197,7 @@
 
 @media (max-width: 1180px) {
 	.topbar { padding-right: 28px; padding-left: 28px; }
+	.has-web-controls .breadcrumb { display: none; }
 	.intro { margin-right: 28px; margin-left: 28px; padding-right: 30px; padding-left: 30px; }
 	.toolbar, .exercise-layout { margin-right: 28px; margin-left: 28px; }
 	.page-footer { margin-right: 28px; margin-left: 28px; }
@@ -213,6 +223,8 @@
 }
 @media (max-width: 680px) {
 	.topbar { min-height: 53px; padding: 0 15px; }
+	.topbar.has-web-controls { padding-top: 8px; padding-bottom: 8px; }
+	.has-web-controls .topbar-actions { gap: 6px; }
 	.breadcrumb { font-size: 8px; }
 	.breadcrumb { display: none; }
 	.topbar { justify-content: space-between; gap: 7px; }

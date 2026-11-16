@@ -1,3 +1,16 @@
+@if (webClosed()) {
+  <main class="web-session-ended" aria-labelledby="session-ended-title">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Hilos" width="64" height="64">
+      <rect width="100" height="100" rx="24" fill="#172c50"/>
+      <path d="M20 31h17c12 0 12 38 25 38h18" fill="none" stroke="#f2a64a" stroke-linecap="round" stroke-width="8"/>
+      <path d="M20 69h17c12 0 12-38 25-38h18" fill="none" stroke="#8eadd9" stroke-linecap="round" stroke-width="8"/>
+      <circle cx="20" cy="31" r="5" fill="#fff"/><circle cx="20" cy="69" r="5" fill="#fff"/>
+      <circle cx="80" cy="31" r="5" fill="#fff"/><circle cx="80" cy="69" r="5" fill="#fff"/>
+    </svg>
+    <h1 id="session-ended-title">Aplicación cerrada</h1>
+    <p>Ya puedes cerrar esta pestaña. Tu progreso queda guardado.</p>
+  </main>
+} @else {
 <div class="app-shell">
   <aside class="rail" [attr.aria-label]="activeView() === 'practice' ? 'Navegación por niveles' : 'Índice de teoría'">
     <a class="brand" href="#inicio" aria-label="Hilos, taller de Java">
@@ -48,18 +61,29 @@
   </aside>
 
   <main class="workspace" id="inicio">
-    <header class="topbar">
+    <header class="topbar" [class.has-web-controls]="isBrowserSession">
       <div class="breadcrumb"><span>FORMACIÓN</span><span class="crumb-separator">/</span><strong>{{ activeView() === 'practice' ? 'LABORATORIO MULTIHILO' : 'TEORÍA MULTIHILO' }}</strong></div>
       <nav class="mode-switch" aria-label="Sección del curso">
         <button type="button" class="mode-button" [class.active]="activeView() === 'theory'" [attr.aria-current]="activeView() === 'theory' ? 'page' : null" (click)="setView('theory')">Teoría</button>
         <button type="button" class="mode-button" [class.active]="activeView() === 'practice'" [attr.aria-current]="activeView() === 'practice' ? 'page' : null" (click)="setView('practice')">Práctica</button>
       </nav>
+      <div class="topbar-actions">
       <div class="top-progress" aria-label="Progreso del taller">
         <span>{{ progressLabel() }}</span>
         <span class="top-progress-track"><span [style.width.%]="progressPercent()"></span></span>
         <strong>{{ progressPercent() }}%</strong>
       </div>
+      @if (isBrowserSession) {
+        <button type="button" class="web-close-button" [disabled]="webClosing()" (click)="closeWebApp()">
+          {{ webClosing() ? 'Cerrando…' : 'Cerrar aplicación' }}
+        </button>
+      }
+      </div>
     </header>
+
+    @if (webCloseError()) {
+      <p class="web-close-error" role="alert">{{ webCloseError() }}</p>
+    }
 
     <section class="intro" aria-labelledby="page-title">
       <div class="intro-copy">
@@ -291,3 +315,4 @@
     }
   </main>
 </div>
+}

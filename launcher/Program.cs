@@ -37,7 +37,7 @@ internal static class Program
                 OpenBrowser(address);
                 Log("Página abierta en el navegador predeterminado");
                 server.WaitForStop();
-                Log("Pestaña cerrada; servidor local detenido");
+                Log("Sesión web finalizada; servidor local detenido");
                 return;
             }
 
@@ -68,19 +68,19 @@ internal static class Program
                 OpenBrowser(address);
                 Log("Página abierta en el navegador predeterminado");
                 server.WaitForStop();
-                Log("Pestaña cerrada; servidor local detenido");
+                Log("Sesión web finalizada; servidor local detenido");
             }
             else
             {
                 Log("Abriendo ventana WebView2");
-                var nativeWindow = new NativeSiteForm(address);
+                var nativeWindow = new NativeSiteForm(AddressForMode(address, LaunchMode.Native));
                 Application.Run(nativeWindow);
                 if (nativeWindow.SwitchToBrowser)
                 {
                     OpenBrowser(address);
                     Log("WebView2 cerró; continuando en navegador");
                     server.WaitForStop();
-                    Log("Pestaña cerrada; servidor local detenido");
+                    Log("Sesión web finalizada; servidor local detenido");
                 }
             }
         }
@@ -115,8 +115,14 @@ internal static class Program
 
     internal static void OpenBrowser(Uri address)
     {
-        Process.Start(new ProcessStartInfo(address.AbsoluteUri) { UseShellExecute = true });
+        var browserAddress = AddressForMode(address, LaunchMode.Browser);
+        Process.Start(new ProcessStartInfo(browserAddress.AbsoluteUri) { UseShellExecute = true });
     }
+
+    private static Uri AddressForMode(Uri address, LaunchMode mode) => new UriBuilder(address)
+    {
+        Query = address.Query.TrimStart('?') + "&mode=" + (mode == LaunchMode.Browser ? "browser" : "native")
+    }.Uri;
 }
 
 internal enum LaunchMode

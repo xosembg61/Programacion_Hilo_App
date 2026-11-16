@@ -4,6 +4,11 @@
 /dist
 /launcher/bin
 /launcher/obj
+/launcher-smoke/bin
+/launcher-smoke/obj
+/server-smoke/bin
+/server-smoke/obj
+/artifacts
 /tmp
 /out-tsc
 /bazel-out

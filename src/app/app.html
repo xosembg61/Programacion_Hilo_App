@@ -1,0 +1,293 @@
+<div class="app-shell">
+  <aside class="rail" [attr.aria-label]="activeView() === 'practice' ? 'Navegación por niveles' : 'Índice de teoría'">
+    <a class="brand" href="#inicio" aria-label="Hilos, taller de Java">
+      <img class="brand-mark" src="/hilos-mark.svg" alt="">
+      <span class="brand-copy"><strong>HILOS</strong><small>TALLER DE JAVA</small></span>
+    </a>
+
+    <div class="rail-section-label">{{ activeView() === 'practice' ? 'RUTA DE PRÁCTICA' : 'CONTENIDO TEÓRICO' }}</div>
+    <nav class="level-nav">
+      @if (activeView() === 'practice') {
+        @for (level of levels; track level) {
+          <button
+            class="level-link"
+            [class.active]="activeLevel() === level"
+            type="button"
+            (click)="selectLevel(level)"
+          >
+            <span class="level-link-name">{{ level === 'Todos' ? 'Todos los retos' : level }}</span>
+            <span class="level-count">{{ level === 'Todos' ? exercises.length : countForLevel(level) }}</span>
+          </button>
+        }
+      } @else {
+        @for (chapter of theoryChapters; track chapter.id) {
+          <button
+            class="level-link chapter-link"
+            [class.active]="selectedChapter().id === chapter.id"
+            type="button"
+            (click)="selectChapter(chapter.id)"
+          >
+            <span class="chapter-link-number">{{ chapter.id < 10 ? '0' : '' }}{{ chapter.id }}</span>
+            <span class="level-link-name">{{ chapter.title }}</span>
+            @if (isChapterStudied(chapter.id)) { <span class="chapter-read-mark" aria-label="Leído">✓</span> }
+          </button>
+        }
+      }
+    </nav>
+
+    <div class="rail-note">
+      <span class="note-mark" aria-hidden="true">J</span>
+      <p>Un problema.<br><strong>Una solución concurrente.</strong></p>
+    </div>
+
+    <div class="rail-bottom">
+      <span class="status-dot"></span>
+      JAVA · CONCURRENCIA
+      <span class="rail-version">20 RETOS</span>
+    </div>
+  </aside>
+
+  <main class="workspace" id="inicio">
+    <header class="topbar">
+      <div class="breadcrumb"><span>FORMACIÓN</span><span class="crumb-separator">/</span><strong>{{ activeView() === 'practice' ? 'LABORATORIO MULTIHILO' : 'TEORÍA MULTIHILO' }}</strong></div>
+      <nav class="mode-switch" aria-label="Sección del curso">
+        <button type="button" class="mode-button" [class.active]="activeView() === 'theory'" [attr.aria-current]="activeView() === 'theory' ? 'page' : null" (click)="setView('theory')">Teoría</button>
+        <button type="button" class="mode-button" [class.active]="activeView() === 'practice'" [attr.aria-current]="activeView() === 'practice' ? 'page' : null" (click)="setView('practice')">Práctica</button>
+      </nav>
+      <div class="top-progress" aria-label="Progreso del taller">
+        <span>{{ progressLabel() }}</span>
+        <span class="top-progress-track"><span [style.width.%]="progressPercent()"></span></span>
+        <strong>{{ progressPercent() }}%</strong>
+      </div>
+    </header>
+
+    <section class="intro" aria-labelledby="page-title">
+      <div class="intro-copy">
+        <div class="eyebrow"><span class="eyebrow-line"></span>JAVA 21 <span class="eyebrow-dot">·</span> {{ activeView() === 'practice' ? 'APRENDER HACIENDO' : 'ESTUDIAR LOS CONCEPTOS' }}</div>
+        @if (activeView() === 'practice') {
+          <h1 id="page-title">Laboratorio de <span>hilos.</span></h1>
+          <p>Construye, coordina y depura programas concurrentes. Ve del primer <code>Thread</code> a los recursos compartidos.</p>
+        } @else {
+          <h1 id="page-title">Teoría de <span>hilos.</span></h1>
+          <p>Estudia los fundamentos, la API de Java y las herramientas de sincronización antes de resolver los retos.</p>
+        }
+      </div>
+      <div class="intro-stamp" [attr.aria-label]="activeView() === 'practice' ? '20 retos prácticos' : '9 capítulos teóricos'">
+        <strong>{{ activeView() === 'practice' ? '20' : '09' }}</strong>
+        <span>{{ activeView() === 'practice' ? 'RETOS\nPRÁCTICOS' : 'BLOQUES\nTEÓRICOS' }}</span>
+      </div>
+    </section>
+
+    @if (activeView() === 'practice') {
+    <section class="toolbar" aria-label="Filtrar ejercicios">
+      <div class="filter-tabs" role="group" aria-label="Filtrar por nivel">
+        @for (level of levels; track level) {
+          <button type="button" class="filter-tab" [class.active]="activeLevel() === level" (click)="selectLevel(level)">
+            {{ level }}
+            @if (level !== 'Todos') { <span>{{ countForLevel(level) }}</span> }
+          </button>
+        }
+      </div>
+      <label class="search-field">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+        <input type="search" [value]="searchText()" (input)="updateSearch($any($event.target).value)" placeholder="Buscar reto o concepto" aria-label="Buscar retos">
+        @if (searchText()) {
+          <button type="button" class="clear-search" aria-label="Limpiar búsqueda" (click)="updateSearch('')">×</button>
+        }
+      </label>
+    </section>
+
+    <section class="exercise-layout" aria-label="Retos prácticos">
+      <div class="exercise-list-panel">
+        <div class="list-heading">
+          <div><span class="section-overline">TU RECORRIDO</span><h2>Retos</h2></div>
+          <span class="result-count">{{ visibleExercises().length < 10 ? '0' : '' }}{{ visibleExercises().length }}</span>
+        </div>
+
+        @if (visibleExercises().length) {
+          <div class="exercise-list">
+            @for (exercise of visibleExercises(); track exercise.id) {
+              <button
+                type="button"
+                class="exercise-row"
+                [class.selected]="selectedExercise()?.id === exercise.id"
+                (click)="selectExercise(exercise.id)"
+                [attr.aria-current]="selectedExercise()?.id === exercise.id ? 'true' : null"
+              >
+                <span class="exercise-number">{{ exercise.id < 10 ? '0' : '' }}{{ exercise.id }}</span>
+                <span class="exercise-row-copy">
+                  <strong>{{ exercise.title }}</strong>
+                  <small>{{ exercise.concept }}</small>
+                </span>
+                <span class="row-state" [class.done]="isCompleted(exercise.id)" [attr.aria-label]="isCompleted(exercise.id) ? 'Completado' : 'Pendiente'">
+                  @if (isCompleted(exercise.id)) { ✓ }
+                </span>
+              </button>
+            }
+          </div>
+        } @else {
+          <div class="empty-list"><span>⌕</span><strong>No hay coincidencias</strong><p>Prueba otro concepto o cambia el nivel.</p></div>
+        }
+
+        <div class="list-footer"><span class="list-footer-dot"></span> AVANCE GUARDADO EN ESTE DISPOSITIVO</div>
+      </div>
+
+      <article class="detail-panel" aria-live="polite">
+        @if (selectedExercise(); as exercise) {
+          <div class="detail-topline">
+            <div class="detail-tags">
+              <span class="level-tag" [class]="'level-tag ' + exercise.level.toLowerCase()">{{ exercise.level }}</span>
+              <span class="concept-tag">{{ exercise.concept }}</span>
+            </div>
+            <span class="duration"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>{{ exercise.duration }}</span>
+          </div>
+
+          <div class="detail-title-row">
+            <span class="detail-number">{{ exercise.id < 10 ? '0' : '' }}{{ exercise.id }}</span>
+            <div><h2>{{ exercise.title }}</h2><p class="exercise-description">{{ exercise.description }}</p></div>
+          </div>
+
+          <section class="assignment-block">
+            <div class="block-heading"><span class="block-icon">01</span><span>EL ENCARGO</span></div>
+            <p>{{ exercise.assignment }}</p>
+          </section>
+
+          <section class="steps-block">
+            <div class="block-heading"><span class="block-icon">02</span><span>CONSTRUYE LA SOLUCIÓN</span></div>
+            <ol class="step-list">
+              @for (step of exercise.steps; track $index) {
+                <li><span class="step-index">{{ $index + 1 }}</span><span>{{ step }}</span></li>
+              }
+            </ol>
+          </section>
+
+          <section class="check-block">
+            <div class="block-heading"><span class="block-icon check-icon">✓</span><span>COMPRUEBA</span></div>
+            <ul>
+              @for (check of exercise.checks; track $index) { <li>{{ check }}</li> }
+            </ul>
+          </section>
+
+          <section class="think-block">
+            <div class="think-label"><span>PIENSA Y EXPLICA</span><span class="think-mark">?</span></div>
+            <p>{{ exercise.question }}</p>
+          </section>
+
+          <details class="solution-details">
+            <summary>
+              <span class="solution-number">03</span>
+              <span>Ver solución orientativa</span>
+              <span class="solution-chevron" aria-hidden="true">+</span>
+            </summary>
+            <div class="solution-content">
+              <p>{{ solutionExplanation(exercise.id) }}</p>
+              <p class="solution-file-count">Archivos de la solución: {{ solutionFiles(exercise.id).length }}</p>
+              @for (file of solutionFiles(exercise.id); track file.filename) {
+                <div class="theory-code solution-code">
+                  <div class="theory-code-caption"><span></span>{{ file.filename }}<span>JAVA</span></div>
+                  <pre><code>{{ file.code }}</code></pre>
+                </div>
+              }
+              <p class="solution-reminder">Prueba a ejecutar y modificar el código. En los retos con variantes, contrasta el resultado con las comprobaciones del enunciado.</p>
+            </div>
+          </details>
+
+          <footer class="detail-footer">
+            <button type="button" class="complete-button" [class.completed]="isCompleted(exercise.id)" (click)="toggleCompleted(exercise.id)">
+              <span class="button-check">{{ isCompleted(exercise.id) ? '✓' : '' }}</span>
+              {{ isCompleted(exercise.id) ? 'Reto completado' : 'Marcar como completado' }}
+            </button>
+            <div class="detail-navigation">
+              <button type="button" aria-label="Reto anterior" title="Reto anterior" (click)="moveSelection(-1)">←</button>
+              <button type="button" aria-label="Reto siguiente" title="Reto siguiente" (click)="moveSelection(1)">→</button>
+            </div>
+          </footer>
+        } @else {
+          <div class="no-selection"><span>⌕</span><h2>Sin resultados</h2><p>Prueba otra búsqueda o selecciona un nivel diferente.</p></div>
+        }
+      </article>
+    </section>
+
+    <footer class="page-footer"><span>HILOS / TALLER PRÁCTICO</span><span>JAVA · PROGRAMACIÓN MULTIHILO</span></footer>
+    } @else {
+      <section class="theory-layout" aria-label="Lectura de teoría">
+        @if (selectedChapter(); as chapter) {
+          <article class="theory-reader">
+            <header class="theory-chapter-heading">
+              <span class="chapter-kicker">BLOQUE {{ chapter.id < 10 ? '0' : '' }}{{ chapter.id }} · TEORÍA</span>
+              <h2>{{ chapter.title }}</h2>
+              <p>{{ chapter.summary }}</p>
+            </header>
+
+            @for (section of chapter.sections; track $index) {
+              <section class="theory-section" [id]="'theory-section-' + $index">
+                <h3>{{ section.title }}</h3>
+                @for (block of section.blocks; track $index) {
+                  @switch (block.type) {
+                    @case ('paragraph') { <p class="theory-paragraph">{{ block.text }}</p> }
+                    @case ('list') {
+                      <ul class="theory-list">
+                        @for (item of block.items; track $index) { <li>{{ item }}</li> }
+                      </ul>
+                    }
+                    @case ('note') {
+                      <aside class="theory-note">
+                        <strong>{{ block.title }}</strong>
+                        <p>{{ block.text }}</p>
+                      </aside>
+                    }
+                    @case ('code') {
+                      <div class="theory-code">
+                        <div class="theory-code-caption"><span></span>{{ block.caption }}<span>JAVA</span></div>
+                        <pre><code>{{ block.code }}</code></pre>
+                      </div>
+                    }
+                    @case ('table') {
+                      <div class="theory-table-wrap">
+                        <table>
+                          <thead><tr>@for (heading of block.headers; track $index) { <th>{{ heading }}</th> }</tr></thead>
+                          <tbody>
+                            @for (row of block.rows; track $index) {
+                              <tr>@for (cell of row; track $index) { <td>{{ cell }}</td> }</tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    }
+                  }
+                }
+              </section>
+            }
+
+            <footer class="theory-footer">
+              <button type="button" class="complete-button" [class.completed]="isChapterStudied(chapter.id)" (click)="toggleChapterStudied(chapter.id)">
+                <span class="button-check">{{ isChapterStudied(chapter.id) ? '✓' : '' }}</span>
+                {{ isChapterStudied(chapter.id) ? 'Capítulo leído' : 'Marcar capítulo como leído' }}
+              </button>
+              <div class="detail-navigation">
+                <button type="button" aria-label="Capítulo anterior" title="Capítulo anterior" [disabled]="chapter.id === 1" (click)="moveChapter(-1)">←</button>
+                <button type="button" aria-label="Capítulo siguiente" title="Capítulo siguiente" [disabled]="chapter.id === theoryChapters.length" (click)="moveChapter(1)">→</button>
+              </div>
+            </footer>
+          </article>
+
+          <aside class="theory-outline">
+            <span class="outline-label">EN ESTE CAPÍTULO</span>
+            <nav>
+              @for (section of chapter.sections; track $index) {
+                <a [href]="'#theory-section-' + $index">{{ section.title }}</a>
+              }
+            </nav>
+            <div class="outline-progress">
+              <span class="outline-progress-label">LECTURA COMPLETADA</span>
+              <strong>{{ studiedCount() }} <span>/ {{ theoryChapters.length }}</span></strong>
+              <div class="outline-track"><span [style.width.%]="progressPercent()"></span></div>
+            </div>
+            <button type="button" class="outline-practice-link" (click)="setView('practice')">Ir a los retos <span>→</span></button>
+          </aside>
+        }
+      </section>
+      <footer class="page-footer"><span>HILOS / TEORÍA</span><span>JAVA · PROGRAMACIÓN MULTIHILO</span></footer>
+    }
+  </main>
+</div>

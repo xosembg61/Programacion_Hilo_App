@@ -1,0 +1,39 @@
+:root {
+	color-scheme: light;
+	--bg: #f4f5f7;
+	--surface: #ffffff;
+	--surface-2: #f8f9fb;
+	--surface-3: #eef1f5;
+	--text: #171b24;
+	--muted: #6c7482;
+	--muted-2: #9299a5;
+	--line: #e5e8ed;
+	--navy: #172c50;
+	--navy-2: #233d67;
+	--blue: #3f669f;
+	--blue-soft: #edf3fb;
+	--green: #2f765e;
+	--green-soft: #eaf5f0;
+	--shadow: 0 8px 30px rgba(22, 34, 55, .06);
+	--sidebar: 272px;
+	--page: var(--bg);
+	--surface-soft: var(--surface-2);
+	--surface-muted: var(--surface-3);
+	--ink: var(--text);
+	--muted-soft: var(--muted-2);
+	--navy-soft: var(--navy-2);
+	--sidebar-width: var(--sidebar);
+	font-family: Inter, "Segoe UI", sans-serif;
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+* { box-sizing: border-box; }
+html { min-width: 320px; scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--page); color: var(--ink); font-size: 14px; line-height: 1.6; }
+button, input { font: inherit; }
+button { color: inherit; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #8eadd9; outline-offset: 3px; }
+::selection { color: #fff; background: var(--blue); }
